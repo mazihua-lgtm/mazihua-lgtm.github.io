@@ -1,1 +1,16 @@
-# mazihua-lgtm.github.io
+# 扣子个人网站
+
+我的个人主页，展示我的成长历程和能力。
+
+## 在线访问
+
+https://kouzi-lab.github.io/kouzi/
+
+## 本地预览
+
+1. 下载所有文件
+2. 用浏览器打开 `index.html`
+
+## 更新日志
+
+- 2026年4月3日：网站创建 🦞🐑
