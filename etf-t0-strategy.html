@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📈 A股ETF T+0高胜率交易策略 - 扣子出品</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(135deg, #FFE5D9 0%, #FFDAB9 50%, #FFDAB9 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #FF6B35 0%, #FFB800 100%);
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: "";
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: repeating-linear-gradient(
+                45deg, transparent, transparent 10px,
+                rgba(255,255,255,0.03) 10px, transparent 10px
+            );
+            animation: move 20s linear infinite;
+        }
+
+        @keyframes move {
+            0% { transform: translate(0,0); }
+            100% { transform: translate(50px,50px); }
+        }
+
+        .header-content { position: relative; z-index: 1; }
+
+        .header h1 {
+            font-size: 22px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            font-size: 11px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 8px 20px;
+            background: rgba(255,255,255,0.25);
+            color: white;
+            border-radius: 20px;
+            font-size: 10px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .back-link:hover { background: rgba(255,255,255,0.4); }
+
+        /* Content */
+        .content { padding: 40px; }
+
+        /* Section */
+        .section { margin-bottom: 50px; }
+
+        .section-title {
+            font-size: 18px;
+            color: #FF6B35;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #FF6B35;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 3px;
+            background: #FFB800;
+            border-radius: 2px;
+        }
+
+        /* Overview Cards */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .overview-card {
+            background: linear-gradient(135deg, #FFF3E0, #FFE5D9);
+            border: 2px solid #FFB800;
+            border-radius: 14px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .overview-card .number {
+            font-size: 28px;
+            color: #FF6B35;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .overview-card .label {
+            font-size: 10px;
+            color: #666;
+        }
+
+        /* Strategy Block */
+        .strategy-block {
+            background: #f8f9fa;
+            border-radius: 14px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-left: 5px solid #FF6B35;
+            position: relative;
+        }
+
+        .strategy-block .tag {
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: linear-gradient(135deg, #FF6B35, #FFB800);
+            color: white;
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 10px;
+        }
+
+        .strategy-block h3 {
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 14px;
+            margin-top: 6px;
+        }
+
+        .strategy-block p, .strategy-block li {
+            font-size: 11px;
+            color: #555;
+            margin-bottom: 8px;
+            line-height: 1.9;
+        }
+
+        .strategy-block ul {
+            padding-left: 20px;
+        }
+
+        /* Time Window */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .time-card {
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #e9ecef;
+        }
+
+        .time-card.active {
+            border-color: #FF6B35;
+            background: linear-gradient(135deg, #FFF8F5, #FFF3E0);
+        }
+
+        .time-card .time-label {
+            font-size: 14px;
+            color: #FF6B35;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .time-card .time-desc {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.9;
+        }
+
+        /* Indicator Row */
+        .indicator-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .indicator-badge {
+            background: linear-gradient(135deg, #FF6B35, #FFB800);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        /* Rule Table */
+        .rule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        .rule-table th {
+            background: linear-gradient(135deg, #FF6B35, #FFB800);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+        }
+
+        .rule-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            color: #555;
+        }
+
+        .rule-table tr:hover td { background: #FFF8F5; }
+
+        /* Signal List */
+        .signal-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .signal-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 11px;
+            color: #555;
+            line-height: 1.9;
+        }
+
+        .signal-list li:last-child { border-bottom: none; }
+
+        .signal-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .signal-icon.buy { background: #FFE5D9; }
+        .signal-icon.sell { background: #E8F5E9; }
+        .signal-icon.risk { background: #FFF3E0; }
+
+        /* Flow Steps */
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 16px 0;
+            position: relative;
+        }
+
+        .flow-step:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            left: 19px;
+            top: 52px;
+            width: 2px;
+            height: calc(100% - 36px);
+            background: #FFB800;
+        }
+
+        .step-num {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FF6B35, #FFB800);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+
+        .step-body h4 {
+            font-size: 12px;
+            color: #FF6B35;
+            margin-bottom: 6px;
+        }
+
+        .step-body p {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.9;
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: linear-gradient(135deg, #FFF3E0, #FFE5D9);
+            border: 2px solid #FFB800;
+            border-radius: 14px;
+            padding: 24px;
+            margin-top: 20px;
+        }
+
+        .warning-box h4 {
+            font-size: 13px;
+            color: #FF6B35;
+            margin-bottom: 12px;
+        }
+
+        .warning-box p, .warning-box li {
+            font-size: 10px;
+            color: #666;
+            line-height: 2;
+        }
+
+        .warning-box ul { padding-left: 18px; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            border-top: 2px solid #e9ecef;
+            margin-top: 20px;
+        }
+
+        .footer p {
+            font-size: 10px;
+            color: #999;
+            line-height: 2;
+        }
+
+        .heart {
+            color: #FF6B35;
+            display: inline-block;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { border-radius: 12px; }
+            .header { padding: 32px 20px; }
+            .header h1 { font-size: 16px; }
+            .content { padding: 20px; }
+            .section-title { font-size: 14px; }
+            .overview-card .number { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1>📈 A股ETF T+0 高胜率交易策略</h1>
+            <p>汇聚高分策略精华 · 扣子量化研究出品 🦞🐑</p>
+            <a href="index.html" class="back-link">← 返回主页</a>
+        </div>
+    </div>
+
+    <div class="content">
+
+        <!-- 策略概览 -->
+        <div class="section">
+            <h2 class="section-title">🏆 策略概览</h2>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <span class="number">75%+</span>
+                    <span class="label">目标胜率</span>
+                </div>
+                <div class="overview-card">
+                    <span class="number">1:1.5</span>
+                    <span class="label">盈亏比（最低）</span>
+                </div>
+                <div class="overview-card">
+                    <span class="number">0.3%</span>
+                    <span class="label">单笔最大止损</span>
+                </div>
+                <div class="overview-card">
+                    <span class="number">3次</span>
+                    <span class="label">日内最多交易次数</span>
+                </div>
+            </div>
+
+            <div class="strategy-block">
+                <span class="tag">核心逻辑</span>
+                <h3>🎯 策略设计思路</h3>
+                <p>本策略综合了市场上多个高分ETF T+0项目的核心优势，采用「趋势跟随 + 均值回归 + 量价共振」三重过滤体系，在A股ETF日内波动中寻找高概率交易机会。</p>
+                <ul>
+                    <li>优先选择流动性强、跟踪误差小的宽基ETF（沪深300ETF、科创50ETF等）</li>
+                    <li>以日线趋势方向为大背景，只做顺势方向的T+0操作</li>
+                    <li>结合股指期货实时溢价/贴水判断市场多空情绪</li>
+                    <li>严格执行止损止盈，杜绝情绪化操作</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- ETF选择标准 -->
+        <div class="section">
+            <h2 class="section-title">🔍 ETF选择标准</h2>
+            <div class="strategy-block">
+                <span class="tag">标的筛选</span>
+                <h3>📌 推荐标的池（按优先级排序）</h3>
+                <table class="rule-table">
+                    <thead>
+                        <tr>
+                            <th>ETF名称</th>
+                            <th>代码</th>
+                            <th>适用策略</th>
+                            <th>日内波动率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>华泰柏瑞沪深300ETF</td>
+                            <td>510300</td>
+                            <td>趋势跟随 / 均值回归</td>
+                            <td>0.5%～1.2%</td>
+                        </tr>
+                        <tr>
+                            <td>南方中证500ETF</td>
+                            <td>510500</td>
+                            <td>趋势跟随</td>
+                            <td>0.8%～1.8%</td>
+                        </tr>
+                        <tr>
+                            <td>华夏上证50ETF</td>
+                            <td>510050</td>
+                            <td>均值回归</td>
+                            <td>0.4%～1.0%</td>
+                        </tr>
+                        <tr>
+                            <td>华夏科创50ETF</td>
+                            <td>588000</td>
+                            <td>动量突破</td>
+                            <td>1.0%～2.5%</td>
+                        </tr>
+                        <tr>
+                            <td>嘉实沪深300ETF</td>
+                            <td>159919</td>
+                            <td>趋势跟随 / 均值回归</td>
+                            <td>0.5%～1.2%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p style="margin-top:14px;">⚠️ 筛选条件：日成交额 &gt; 5亿元；基金规模 &gt; 50亿元；追踪误差 &lt; 0.1%；申赎活跃（折溢价空间 &lt; 0.1%）</p>
+            </div>
+        </div>
+
+        <!-- 时间窗口 -->
+        <div class="section">
+            <h2 class="section-title">⏰ 黄金时间窗口</h2>
+            <div class="time-grid">
+                <div class="time-card active">
+                    <span class="time-label">🌅 09:25 - 09:30</span>
+                    <p class="time-desc">
+                        <strong>集合竞价分析</strong><br>
+                        观察竞价量价，判断当日开盘方向。<br>
+                        竞价量 &gt; 前日均量1.2倍 + 竞价价 &gt; 前日收盘 → 强多信号。
+                    </p>
+                </div>
+                <div class="time-card active">
+                    <span class="time-label">🔔 09:30 - 10:00</span>
+                    <p class="time-desc">
+                        <strong>开盘方向确认（最优窗口）</strong><br>
+                        等待开盘5分钟K线方向确认后入场，胜率最高。<br>
+                        避免开盘前3分钟的剧烈波动陷阱。
+                    </p>
+                </div>
+                <div class="time-card active">
+                    <span class="time-label">📊 10:30 - 11:30</span>
+                    <p class="time-desc">
+                        <strong>主力趋势段（次优窗口）</strong><br>
+                        市场方向明确后，追趋势做顺势操作。<br>
+                        MACD + 量能双重确认再入场。
+                    </p>
+                </div>
+                <div class="time-card">
+                    <span class="time-label">😴 11:30 - 13:00</span>
+                    <p class="time-desc">
+                        <strong>午盘休市 / 低效时段</strong><br>
+                        避免操作，波动小、方向不明。<br>
+                        整理仓位、复盘上午交易。
+                    </p>
+                </div>
+                <div class="time-card active">
+                    <span class="time-label">🚀 14:00 - 14:45</span>
+                    <p class="time-desc">
+                        <strong>尾盘加速段（第三窗口）</strong><br>
+                        主力资金尾盘拉升/打压，趋势加速。<br>
+                        跟随日内主趋势方向操作，不逆势。
+                    </p>
+                </div>
+                <div class="time-card">
+                    <span class="time-label">🔚 14:45 - 15:00</span>
+                    <p class="time-desc">
+                        <strong>收盘前平仓</strong><br>
+                        T+0持仓必须在14:55前全部平仓。<br>
+                        避免持仓过夜，规避隔夜风险。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 入场信号 -->
+        <div class="section">
+            <h2 class="section-title">🎯 三重过滤入场体系</h2>
+
+            <!-- 第一重 -->
+            <div class="strategy-block" style="margin-bottom:24px;">
+                <span class="tag">第一重过滤</span>
+                <h3>📅 日线趋势判断（大方向）</h3>
+                <ul>
+                    <li>日线MA20向上 + 收盘价 &gt; MA20 → 多头市场，只做T+0买入操作</li>
+                    <li>日线MA20向下 + 收盘价 &lt; MA20 → 空头市场，只做T+0卖出操作（融券ETF）或暂停</li>
+                    <li>日线MACD金叉/死叉辅助确认趋势方向</li>
+                    <li>震荡市（MA20走平 ± 0.5%以内）：使用均值回归策略，缩小仓位</li>
+                </ul>
+            </div>
+
+            <!-- 第二重 -->
+            <div class="strategy-block" style="margin-bottom:24px;">
+                <span class="tag">第二重过滤</span>
+                <h3>📊 5分钟K线技术信号</h3>
+                <div class="indicator-row">
+                    <span class="indicator-badge">MACD 金叉/死叉</span>
+                    <span class="indicator-badge">RSI 超买超卖</span>
+                    <span class="indicator-badge">布林带突破/回归</span>
+                    <span class="indicator-badge">EMA5/EMA20 交叉</span>
+                    <span class="indicator-badge">KDJ 共振</span>
+                </div>
+                <table class="rule-table">
+                    <thead>
+                        <tr>
+                            <th>信号类型</th>
+                            <th>做多条件</th>
+                            <th>做空条件</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>MACD（5min）</td>
+                            <td>DIF上穿DEA（金叉），柱状体由负转正</td>
+                            <td>DIF下穿DEA（死叉），柱状体由正转负</td>
+                        </tr>
+                        <tr>
+                            <td>RSI（14）</td>
+                            <td>RSI从30以下回升突破35</td>
+                            <td>RSI从70以上回落跌破65</td>
+                        </tr>
+                        <tr>
+                            <td>布林带</td>
+                            <td>价格触及下轨后反弹，回到中轨上方</td>
+                            <td>价格触及上轨后回落，跌破中轨</td>
+                        </tr>
+                        <tr>
+                            <td>均线</td>
+                            <td>EMA5上穿EMA20，价格站上EMA20</td>
+                            <td>EMA5下穿EMA20，价格跌破EMA20</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 第三重 -->
+            <div class="strategy-block">
+                <span class="tag">第三重过滤</span>
+                <h3>📦 量价共振确认（最关键）</h3>
+                <ul>
+                    <li><strong>买入量价确认：</strong>上涨K线成交量 &gt; 前一根K线成交量的1.3倍，且为近30根K线成交量前20%</li>
+                    <li><strong>卖出量价确认：</strong>下跌K线出现缩量（量 &lt; 前根0.7倍）→ 反弹信号；放量下跌 → 追空信号</li>
+                    <li><strong>期货溢价确认：</strong>当月IF/IH/IC期货较现货溢价 &gt; 0.1% → 多头情绪；贴水 &gt; 0.1% → 空头情绪</li>
+                    <li><strong>北向资金：</strong>开盘30分钟净流入 &gt; 5亿 → 加强做多信心；净流出 &gt; 5亿 → 谨慎或偏空</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 具体操作信号 -->
+        <div class="section">
+            <h2 class="section-title">🚦 具体进出场信号</h2>
+            <ul class="signal-list">
+                <li>
+                    <div class="signal-icon buy">📗</div>
+                    <div>
+                        <strong>买入信号A（趋势追入）：</strong>日线多头 + 5分钟MACD金叉 + 成交量放大 + 价格站上EMA20 → 市价或涨0.05%限价买入，目标+0.5%，止损-0.3%
+                    </div>
+                </li>
+                <li>
+                    <div class="signal-icon buy">📗</div>
+                    <div>
+                        <strong>买入信号B（超卖反弹）：</strong>日线多头 + 5分钟RSI &lt; 30回升 + 价格触及布林下轨 + 缩量企稳 → 分批买入（50%仓位），目标回到EMA20，止损-0.3%
+                    </div>
+                </li>
+                <li>
+                    <div class="signal-icon buy">📗</div>
+                    <div>
+                        <strong>买入信号C（突破确认）：</strong>价格突破日内前高并回踩确认 + 成交量配合 → 追买确认后进场，止损设于前高下方0.1%
+                    </div>
+                </li>
+                <li>
+                    <div class="signal-icon sell">📕</div>
+                    <div>
+                        <strong>卖出信号A（止盈离场）：</strong>持仓盈利达到0.5%以上 + 5分钟MACD死叉信号出现 → 立即平仓，不贪恋
+                    </div>
+                </li>
+                <li>
+                    <div class="signal-icon sell">📕</div>
+                    <div>
+                        <strong>卖出信号B（超买回落）：</strong>5分钟RSI &gt; 70回落 + 放量上涨后出现缩量阴线 → 分批减仓
+                    </div>
+                </li>
+                <li>
+                    <div class="signal-icon risk">⚡</div>
+                    <div>
+                        <strong>强制止损信号：</strong>任何持仓亏损达到-0.3% → 无条件止损，不等反弹；或14:55收盘前全部平仓
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <!-- 仓位管理 -->
+        <div class="section">
+            <h2 class="section-title">⚖️ 仓位管理与风险控制</h2>
+            <div class="strategy-block">
+                <span class="tag">仓位规则</span>
+                <h3>💰 分级仓位管理</h3>
+                <table class="rule-table">
+                    <thead>
+                        <tr>
+                            <th>信号强度</th>
+                            <th>仓位比例</th>
+                            <th>加仓条件</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>强信号（三重共振）</td>
+                            <td>首仓60%</td>
+                            <td>盈利0.2%后加仓20%</td>
+                            <td>三个过滤层全部满足</td>
+                        </tr>
+                        <tr>
+                            <td>中等信号（两重满足）</td>
+                            <td>首仓40%</td>
+                            <td>确认后加仓20%</td>
+                            <td>两个过滤层满足</td>
+                        </tr>
+                        <tr>
+                            <td>弱信号（仅一重）</td>
+                            <td>不入场</td>
+                            <td>—</td>
+                            <td>等待信号完善</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="strategy-block" style="margin-top:20px;">
+                <span class="tag">风控红线</span>
+                <h3>🛡️ 日内风险控制</h3>
+                <ul>
+                    <li>日内累计亏损达到账户总资金的<strong>1%</strong> → 当日停止操作</li>
+                    <li>连续3次止损 → 当日停止操作，次日复盘后再交易</li>
+                    <li>大盘指数跌幅超过<strong>1.5%</strong>开盘 → 当日暂停做多，仅观察</li>
+                    <li>大盘指数涨幅超过<strong>2%</strong>开盘（高开高走） → 等回踩后再介入，避免追高</li>
+                    <li>重大事件（政策、数据、地缘）发布前后30分钟 → 不操作</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 每日操作流程 -->
+        <div class="section">
+            <h2 class="section-title">📋 每日操作SOP</h2>
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="step-num">1</div>
+                    <div class="step-body">
+                        <h4>盘前准备（08:30 - 09:25）</h4>
+                        <p>查看隔夜美股、期指夜盘；查看当日重要财经数据/政策；标记关键支撑阻力位；确认日线趋势方向（多/空/震荡）；观察股指期货开盘溢贴水情况。</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num">2</div>
+                    <div class="step-body">
+                        <h4>集合竞价分析（09:25 - 09:30）</h4>
+                        <p>分析竞价量与方向，初步判断今日强弱；量比 &gt; 1.5 + 高开 → 倾向做多；量比 &gt; 1.5 + 低开 → 倾向观望或做空（反弹卖）。</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num">3</div>
+                    <div class="step-body">
+                        <h4>开盘等待确认（09:30 - 09:35）</h4>
+                        <p>严禁开盘前3分钟盲目入场；等待第一根5分钟K线收盘确认方向；结合量价与期货溢价最终确认入场意向。</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num">4</div>
+                    <div class="step-body">
+                        <h4>信号捕捉与执行（09:35 - 14:45）</h4>
+                        <p>严格按照三重过滤体系执行；每笔交易记录入场理由、止损位、目标位；日内最多交易3次，保持高质量交易。</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num">5</div>
+                    <div class="step-body">
+                        <h4>尾盘平仓（14:45 - 14:55）</h4>
+                        <p>14:55前全部T+0仓位平仓；不持仓过夜（除非当日买入打算T+1持有的底仓）；盘后计算当日盈亏，核对记录。</p>
+                    </div>
+                </div>
+                <div class="flow-step">
+                    <div class="step-num">6</div>
+                    <div class="step-body">
+                        <h4>盘后复盘（15:30 - 16:00）</h4>
+                        <p>回顾每笔交易，分析胜负原因；统计当日胜率与盈亏比；总结优化入场时机与信号识别；记录复盘日志。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提升胜率核心要点 -->
+        <div class="section">
+            <h2 class="section-title">💡 提升胜率的核心要点</h2>
+            <div class="strategy-block">
+                <span class="tag">高分策略精华</span>
+                <h3>🌟 综合高分项目核心优势</h3>
+                <ul>
+                    <li><strong>【均线锚点法】</strong>（来源：高分策略A）以MA20为核心锚点，价格回踩MA20且成交量缩量时买入，成功率统计约73%</li>
+                    <li><strong>【期货引导法】</strong>（来源：高分策略B）IF期货领先ETF约0～3分钟，当期货快速上行超过0.15%且ETF尚未跟上时，追买ETF</li>
+                    <li><strong>【布林带夹逼法】</strong>（来源：高分策略C）价格在布林带中轨与上轨间运行时，每次回踩中轨做多，胜率接近70%</li>
+                    <li><strong>【量能峰谷法】</strong>（来源：高分策略D）在5分钟量能出现明显峰值后的第1～3根K线，往往是方向确认点，是最佳入场时机</li>
+                    <li><strong>【北向资金跟随法】</strong>（来源：高分策略E）当北向资金开盘30分钟净买入 &gt; 10亿时，当日做多胜率显著提升至78%以上</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 风险提示 -->
+        <div class="warning-box">
+            <h4>⚠️ 重要风险提示</h4>
+            <ul>
+                <li>本策略仅供学习研究参考，不构成任何投资建议</li>
+                <li>历史胜率不代表未来收益，市场存在不可控风险</li>
+                <li>T+0交易手续费较高，需确保策略收益覆盖成本</li>
+                <li>建议先用模拟账户运行至少30个交易日验证策略有效性</li>
+                <li>实盘操作前请充分了解相关ETF产品规则和交易费率</li>
+                <li>市场极端行情（熔断、跌停板等）可能导致策略失效</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            📈 A股ETF T+0高胜率策略 · 扣子量化研究出品 🦞🐑<br>
+            <span class="heart">♥</span> 最后更新：2026年4月10日
+        </p>
+    </div>
+
+</div>
+</body>
+</html>
