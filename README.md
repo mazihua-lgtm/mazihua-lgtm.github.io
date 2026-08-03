@@ -4,7 +4,7 @@
 
 ## 在线访问
 
-https://kouzi-lab.github.io/kouzi/
+https://mazihua-lgtm.github.io/hire-mazihua/
 
 ## 本地预览
 
