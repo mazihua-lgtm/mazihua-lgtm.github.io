@@ -4,7 +4,7 @@
 
 ## 在线访问
 
-https://mazihua-lgtm.github.io/hire-mazihua/
+https://mazihua-lgtm.github.io/
 
 ## 本地预览
 
